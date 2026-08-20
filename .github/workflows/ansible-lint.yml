@@ -28,60 +28,36 @@ jobs:
         run: yamllint .
 
   trigger-aap:
-    name: Sync AAP project and launch workflow
+    name: Launch AAP workflow
     needs: lint
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-24.04
     steps:
-      - name: Sync AAP project
-        run: |
-          # AAP 2.5 on OpenShift uses the gateway API path
-          API="${{ secrets.AAP_HOST }}/api/controller/v2"
-
-          # Trigger project sync
-          SYNC_RESULT=$(curl -sk -o /dev/null -w "%{http_code}" -X POST \
-            "${API}/projects/${{ secrets.AAP_PROJECT_ID }}/update/" \
-            -H "Authorization: Bearer ${{ secrets.AAP_TOKEN }}" \
-            -H "Content-Type: application/json")
-          echo "Project sync triggered: HTTP $SYNC_RESULT"
-          if [ "$SYNC_RESULT" -lt 200 ] || [ "$SYNC_RESULT" -ge 300 ]; then
-            echo "::error::Failed to sync AAP project (HTTP $SYNC_RESULT)"
-            exit 1
-          fi
-
-          # Wait for the project sync to finish
-          echo "Waiting for project sync to complete..."
-          for i in $(seq 1 30); do
-            sleep 10
-            STATUS=$(curl -sk \
-              "${API}/projects/${{ secrets.AAP_PROJECT_ID }}/" \
-              -H "Authorization: Bearer ${{ secrets.AAP_TOKEN }}" | \
-              python3 -c "import sys,json; print(json.load(sys.stdin).get('status','unknown'))")
-            echo "  Attempt $i: project status = $STATUS"
-            if [ "$STATUS" = "successful" ]; then
-              echo "Project sync completed successfully."
-              break
-            elif [ "$STATUS" = "failed" ] || [ "$STATUS" = "error" ] || [ "$STATUS" = "canceled" ]; then
-              echo "::error::Project sync failed with status: $STATUS"
-              exit 1
-            fi
-          done
-
       - name: Launch AAP workflow template
         run: |
-          API="${{ secrets.AAP_HOST }}/api/controller/v2"
-
-          LAUNCH_RESULT=$(curl -sk -w "\n%{http_code}" -X POST \
-            "${API}/workflow_job_templates/${{ secrets.AAP_WORKFLOW_ID }}/launch/" \
-            -H "Authorization: Bearer ${{ secrets.AAP_TOKEN }}" \
-            -H "Content-Type: application/json")
-          HTTP_CODE=$(echo "$LAUNCH_RESULT" | tail -1)
-          BODY=$(echo "$LAUNCH_RESULT" | head -n -1)
-          echo "Workflow launch: HTTP $HTTP_CODE"
-          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
-            echo "::error::Failed to launch AAP workflow (HTTP $HTTP_CODE)"
-            echo "$BODY"
-            exit 1
-          fi
-          WORKFLOW_URL=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('url',''))")
-          echo "✅ AAP workflow launched: ${{ secrets.AAP_HOST }}/#$WORKFLOW_URL"
+          # AAP auto-syncs the project on launch (Update Revision on Launch)
+          # Try gateway API first (AAP 2.5+), fall back to legacy API
+          for API_PATH in "api/controller/v2" "api/v2"; do
+            URL="${{ secrets.AAP_HOST }}/${API_PATH}/workflow_job_templates/${{ secrets.AAP_WORKFLOW_ID }}/launch/"
+            echo "Trying: ${URL}"
+            LAUNCH_RESULT=$(curl -sk -w "\n%{http_code}" -X POST \
+              "${URL}" \
+              -H "Authorization: Bearer ${{ secrets.AAP_TOKEN }}" \
+              -H "Content-Type: application/json")
+            HTTP_CODE=$(echo "$LAUNCH_RESULT" | tail -1)
+            BODY=$(echo "$LAUNCH_RESULT" | head -n -1)
+            echo "Response: HTTP $HTTP_CODE"
+            if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+              echo "✅ AAP workflow launched successfully!"
+              echo "$BODY" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          print(f'  Job ID: {data.get(\"id\", \"N/A\")}')
+          print(f'  URL: {data.get(\"url\", \"N/A\")}')
+          " || true
+              exit 0
+            fi
+          done
+          echo "::error::Failed to launch AAP workflow on all API paths"
+          echo "$BODY"
+          exit 1
