@@ -1,38 +1,27 @@
 ---
-# ==============================================================================
-# Enterprise BIND DNS Configuration for Azure Hub-and-Spoke
-# Path: group_vars/all.yml
-# ==============================================================================
+---
+# Non-secret production configuration. Secrets belong in an AAP credential or
+# in an Ansible-Vault encrypted file, never in this file.
+bind_dns_zone: corp.example.com
+bind_dns_zone_serial: "2026082101"
+bind_dns_listen_addresses:
+  - 127.0.0.1
+  - 10.0.0.4
+bind_dns_allowed_networks:
+  - 127.0.0.1
+  - 10.0.0.0/16
+  - 10.1.0.0/16
+bind_dns_forwarders:
+  - 168.63.129.16
+bind_dns_records:
+  - name: dns-01
+    ip: 10.0.0.4
+  - name: app-01
+    ip: 10.1.1.4
+  - name: app-02
+    ip: 10.1.1.5
 
-# 1. Listening Interfaces & Security ACLs
-bind_listen_ipv4:
-  - "127.0.0.1"
-  - "10.0.0.4"              # Bastion Host Private IP
-
-bind_allow_query:
-  - "localhost"
-  - "10.0.0.0/16"           # Hub VNet Subnet
-  - "10.1.0.0/16"           # Spoke VNet Subnet
-
-# 2. Upstream Recursive Forwarders (Azure Recursive DNS + Fallback)
-bind_forwarders:
-  - "168.63.129.16"         # Azure Internal Recursive Resolver
-  - "8.8.8.8"               # Google Public DNS Fallback
-
-bind_recursion: true
-
-# 3. Private Authoritative Zones & Host Records
-bind_zone_domains:
-  - name: "internal"
-    type: "master"
-    networks:
-      - "10.0"
-      - "10.1"
-    hostmaster_email: "sre.deepan99@gmail.com"
-    hosts:
-      - name: "bastion"
-        ip: "10.0.0.4"
-      - name: "awx1"
-        ip: "10.1.1.5"
-      - name: "awx2"
-        ip: "10.1.1.4"
+dns_client_nameservers:
+  - 10.0.0.4
+dns_client_search_domains:
+  - corp.example.com

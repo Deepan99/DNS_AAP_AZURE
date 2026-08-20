@@ -1,15 +1,17 @@
-# ==============================================================================
-# AAP Azure Dynamic Inventory Plugin Config
-# Path: inventories/production.azure_rm.yml
-# ==============================================================================
+---
+# Azure dynamic inventory. The AAP Azure Resource Manager credential supplies
+# authentication; no cloud credentials are stored in Git.
 plugin: azure.azcollection.azure_rm
 include_vm_resource_groups:
   - rg-hub-eastus
-  - RG-SPOKE-EASTUS
+  - rg-spoke-eastus
 
 auth_source: auto
 
-# Group hosts dynamically based on Azure Tags & Resource Groups
+groups:
+  dns_servers: "tags.Role | default('') == 'dns_server'"
+  dns_clients: "tags.Role | default('') == 'dns_client'"
+
 keyed_groups:
   - key: tags.Role
     prefix: role

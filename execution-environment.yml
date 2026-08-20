@@ -1,0 +1,17 @@
+---
+version: 3
+images:
+  base_image:
+    name: registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9:latest
+dependencies:
+  galaxy: collections/requirements.yml
+  python:
+    - azure-identity
+    - azure-mgmt-compute
+    - azure-mgmt-network
+    - msrestazure
+    - netaddr
+    - dnspython
+additional_build_steps:
+  prepend_base:
+    - RUN $PKGMGR -y install bind-utils && $PKGMGR clean all

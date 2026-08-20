@@ -1,0 +1,10 @@
+---
+bind_dns_zone: corp.example.com
+bind_dns_zone_serial: "2026082101"
+bind_dns_listen_addresses:
+  - 127.0.0.1
+bind_dns_allowed_networks:
+  - 127.0.0.1
+bind_dns_forwarders:
+  - 168.63.129.16
+bind_dns_records: []

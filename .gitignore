@@ -24,3 +24,15 @@ docker-tests/
 
 # Ignore Ansible fact cache
 .cache/
+
+# Ansible / AAP local files and credentials
+artifacts/
+collections/ansible_collections/
+*.retry
+*.vault
+vault_password*
+.env
+
+# Python tooling
+.venv/
+__pycache__/
