@@ -1,0 +1,41 @@
+---
+# ==============================================================================
+# Playbook: Post-Deployment Infrastructure & DNS Validation
+# AAP / AWX Workflow Step 4 (Final Validation)
+# ==============================================================================
+
+- name: Post-Check - Validate Central DNS Server Services
+  hosts: bastion, tag_Role_bastion, rg_hub_eastus
+  become: yes
+  tasks:
+    - name: Post-Check 1 - Verify dnsmasq / BIND Service Status
+      service_facts:
+
+    - name: Assert DNS Service is Active
+      assert:
+        that:
+          - "ansible_facts.services['dnsmasq.service'].state == 'running' or ansible_facts.services['named.service'].state == 'running' or ansible_facts.services['bind9.service'].state == 'running'"
+        fail_msg: "DNS Service is NOT running on Bastion Host!"
+        success_msg: "DNS Service is active and running cleanly on Bastion Host."
+
+- name: Post-Check - Validate End-to-End Resolution & NAT on Spoke Workloads
+  hosts: spoke_nodes, tag_Tier_web, rg_spoke_eastus
+  become: yes
+  tasks:
+    - name: Post-Check 2 - Validate Internal Domain Name Resolution (.internal)
+      command: getent hosts bastion.internal
+      register: post_dns_internal
+      failed_when: "'10.0.0.4' not in post_dns_internal.stdout"
+
+    - name: Post-Check 3 - Validate Outbound HTTPS Access via Bastion NAT
+      uri:
+        url: https://packages.microsoft.com
+        method: HEAD
+        status_code: 200, 301, 302
+      register: post_nat_https
+
+    - name: Display Final Post-Deployment Verification Summary
+      debug:
+        msg:
+          - "✅ Internal DNS Resolution (bastion.internal): {{ post_dns_internal.stdout }}"
+          - "✅ Outbound HTTPS via NAT (packages.microsoft.com): HTTP {{ post_nat_https.status }}"

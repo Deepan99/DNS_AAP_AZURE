@@ -1,0 +1,39 @@
+---
+# ==============================================================================
+# Playbook: Pre-Deployment Infrastructure & DNS Check
+# AAP / AWX Workflow Step 1
+# ==============================================================================
+
+- name: Pre-Check - Audit Bastion Gateway & Target Connectivity
+  hosts: bastion, tag_Role_bastion, rg_hub_eastus
+  become: yes
+  tasks:
+    - name: Pre-Check 1 - Verify Kernel IP Forwarding on Bastion
+      command: cat /proc/sys/net/ipv4/ip_forward
+      register: pre_ip_forward
+      changed_when: false
+
+    - name: Pre-Check 2 - Verify Port 53 Availability on Bastion
+      command: ss -tulpn
+      register: pre_port_53
+      changed_when: false
+
+    - name: Display Pre-Check Status
+      debug:
+        msg:
+          - "IP Forwarding Enabled: {{ pre_ip_forward.stdout }}"
+          - "Port 53 Active Listeners: {{ pre_port_53.stdout_lines | select('search', ':53') | list }}"
+
+- name: Pre-Check - Spoke Workload Network Audit
+  hosts: spoke_nodes, tag_Tier_web, rg_spoke_eastus
+  become: yes
+  tasks:
+    - name: Pre-Check 3 - Check Current DNS Resolver on Spoke Node
+      command: systemd-resolve --status || resolvectl status
+      register: pre_spoke_dns
+      changed_when: false
+      failed_when: false
+
+    - name: Display Current Spoke Resolver Status
+      debug:
+        msg: "Current Resolver Configuration: {{ pre_spoke_dns.stdout_lines[:10] }}"
