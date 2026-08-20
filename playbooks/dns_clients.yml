@@ -11,12 +11,15 @@
 
   tasks:
     - name: Configure systemd-resolved DNS servers
-      ansible.builtin.ini_file:
+      community.general.ini_file:
         path: /etc/systemd/resolved.conf
         section: Resolve
         option: "{{ item.option }}"
         value: "{{ item.value }}"
         no_extra_spaces: yes
+        owner: root
+        group: root
+        mode: '0644'
       loop:
         - { option: "DNS", value: "{{ dns_client_nameservers | join(' ') }}" }
         - { option: "Domains", value: "{{ dns_client_search_domains | join(' ') }}" }

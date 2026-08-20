@@ -1,9 +1,11 @@
+---
 name: Ansible quality gates
 
-on:
+"on":
   pull_request:
   push:
-    branches: [main]
+    branches:
+      - "**"
 
 permissions:
   contents: read
@@ -19,8 +21,8 @@ jobs:
       - name: Install Ansible tooling
         run: pip install ansible-core ansible-lint yamllint
       - name: Install collections
-        run: ansible-galaxy collection install -r collections/requirements.yml
+        run: ansible-galaxy collection install -r collections/requirements.yml -p "$RUNNER_TEMP"
       - name: Lint playbooks and roles
-        run: ansible-lint playbooks roles
+        run: ANSIBLE_COLLECTIONS_PATH="$RUNNER_TEMP/ansible_collections" ansible-lint playbooks roles
       - name: Lint YAML
         run: yamllint .
