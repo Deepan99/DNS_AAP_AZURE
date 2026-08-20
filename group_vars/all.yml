@@ -1,0 +1,20 @@
+---
+# Define your Private DNS Zone and the records for your 3 VMs
+bind_zones:
+  - name: "azure.local"  # Change this if you want a different domain name
+    primaries:
+      - "10.0.0.4"  # REPLACE with the private IP of your bastion-host
+    name_servers:
+      - "bastion-host.azure.local."
+    hosts:
+      # Master DNS Server
+      - name: "bastion-host"
+        ip: "10.0.0.4"   # REPLACE with private IP of bastion-host
+      
+      # Client 1
+      - name: "awx-target-1"
+        ip: "10.0.0.5"   # REPLACE with private IP of awx-target-1
+      
+      # Client 2
+      - name: "awx-target-2"
+        ip: "10.0.0.6"   # REPLACE with private IP of awx-target-2
