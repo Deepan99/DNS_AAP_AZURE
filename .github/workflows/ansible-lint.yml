@@ -1,6 +1,7 @@
+---
 name: Ansible quality gates
 
-on:
+"on":
   pull_request:
   push:
     branches:
