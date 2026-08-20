@@ -1,0 +1,31 @@
+---
+# ==============================================================================
+# Playbook: Configure DNS Client Resolvers on Spoke Workloads
+# Target: Spoke VMs / Client Nodes
+# ==============================================================================
+
+- name: Configure Private DNS Resolver Target (10.0.0.4) on Clients
+  hosts: spoke_nodes, tag_Tier_web, rg_spoke_eastus
+  become: yes
+  vars:
+    primary_dns_server: "10.0.0.4"
+    search_domain: "internal"
+
+  tasks:
+    - name: Configure systemd-resolved DNS servers
+      ini_file:
+        path: /etc/systemd/resolved.conf
+        section: Resolve
+        option: "{{ item.option }}"
+        value: "{{ item.value }}"
+        no_extra_spaces: yes
+      loop:
+        - { option: "DNS", value: "{{ primary_dns_server }}" }
+        - { option: "Domains", value: "{{ search_domain }}" }
+      notify: Restart systemd-resolved
+
+  handlers:
+    - name: Restart systemd-resolved
+      service:
+        name: systemd-resolved
+        state: restarted

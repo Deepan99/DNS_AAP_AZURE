@@ -1,37 +1,26 @@
 ---
 galaxy_info:
   role_name: bind
-  namespace: bertvv
-  author: Bert Van Vreckem
+  namespace: Deepan99
+  author: DDeepan kumar
   description: >
-    Sets up ISC BIND as an authoritative DNS server for one or more domains
-    (primary and/or secondary).
-  license: BSD
-  min_ansible_version: 2.7
+    Sets up ISC BIND as a central authoritative and caching DNS server
+    for Azure Hub-and-Spoke enterprise infrastructure via Ansible Automation Platform (AAP).
+  license: MIT
+  min_ansible_version: '2.9'
   platforms:
-    - name: ArchLinux
-      versions:
-        - any
-    - name: Debian
-      versions:
-        - jessie
-        - stretch
-        - buster
-    - name: FreeBSD
-      versions:
-        - 12.1
     - name: EL
       versions:
-        - 6
-        - 7
-        - 8
+        - '8'
+        - '9'
     - name: Ubuntu
       versions:
-        - xenial
-        - bionic
         - focal
+        - jammy
+        - noble
   galaxy_tags:
     - dns
     - networking
-    - system
+    - azure
+    - aap
 dependencies: []

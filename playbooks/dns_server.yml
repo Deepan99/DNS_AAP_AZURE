@@ -1,0 +1,13 @@
+---
+# ==============================================================================
+# Playbook: Deploy ISC BIND Private DNS Server
+# Target: Bastion Host / DNS Server Group
+# AAP / AWX Entry Point
+# ==============================================================================
+
+- name: Deploy and Configure BIND DNS Server
+  hosts: dns_servers, bastion, tag_Role_bastion, rg_hub_eastus
+  become: yes
+
+  roles:
+    - role: "{{ playbook_dir }}/.."
