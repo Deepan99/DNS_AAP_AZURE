@@ -15,7 +15,7 @@ bind_dns_keys: []
 # List of IPv4 address of the network interface(s) to listen on. Set to "any"
 # to listen on all interfaces
 bind_listen_ipv4:
-  - "127.0.0.1"
+  - "any"
 
 # The list of ports to listen on for IPv4 addresses
 bind_listen_ipv4_port:
@@ -31,14 +31,14 @@ bind_listen_ipv6_port:
 
 # List of hosts that are allowed to query this DNS server.
 bind_allow_query:
-  - "localhost"
+  - "any"
 
 # A key-value list mapping server-IPs to TSIG keys for signing requests
 bind_key_mapping: {}
 
 # Determines whether recursion should be allowed. Typically, an authoritative
 # name server should have recursion turned OFF.
-bind_recursion: false
+bind_recursion: true
 bind_allow_recursion:
   - "any"
 
@@ -46,7 +46,9 @@ bind_allow_recursion:
 bind_forward_only: false
 
 # List of name servers to forward DNS requests to.
-bind_forwarders: []
+bind_forwarders:
+  - "168.63.129.16"
+  - "8.8.8.8"
 
 # DNS round robin order (random or cyclic)
 bind_rrset_order: "random"
