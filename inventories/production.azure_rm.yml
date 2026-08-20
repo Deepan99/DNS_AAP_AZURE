@@ -1,0 +1,21 @@
+# ==============================================================================
+# AAP Azure Dynamic Inventory Plugin Config
+# Path: inventories/production.azure_rm.yml
+# ==============================================================================
+plugin: azure.azcollection.azure_rm
+include_vm_resource_groups:
+  - rg-hub-eastus
+  - RG-SPOKE-EASTUS
+
+auth_source: auto
+
+# Group hosts dynamically based on Azure Tags & Resource Groups
+keyed_groups:
+  - key: tags.Role
+    prefix: role
+  - key: resource_group
+    prefix: rg
+
+# Map IP Address for SSH
+hostvar_expressions:
+  ansible_host: private_ip_address
