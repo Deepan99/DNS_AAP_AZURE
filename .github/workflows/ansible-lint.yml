@@ -35,9 +35,12 @@ jobs:
     steps:
       - name: Sync AAP project
         run: |
-          # Trigger project sync and wait for completion
-          SYNC_RESULT=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
-            "${{ secrets.AAP_HOST }}/api/v2/projects/${{ secrets.AAP_PROJECT_ID }}/update/" \
+          # AAP 2.5 on OpenShift uses the gateway API path
+          API="${{ secrets.AAP_HOST }}/api/controller/v2"
+
+          # Trigger project sync
+          SYNC_RESULT=$(curl -sk -o /dev/null -w "%{http_code}" -X POST \
+            "${API}/projects/${{ secrets.AAP_PROJECT_ID }}/update/" \
             -H "Authorization: Bearer ${{ secrets.AAP_TOKEN }}" \
             -H "Content-Type: application/json")
           echo "Project sync triggered: HTTP $SYNC_RESULT"
@@ -45,12 +48,13 @@ jobs:
             echo "::error::Failed to sync AAP project (HTTP $SYNC_RESULT)"
             exit 1
           fi
+
           # Wait for the project sync to finish
           echo "Waiting for project sync to complete..."
           for i in $(seq 1 30); do
             sleep 10
-            STATUS=$(curl -s \
-              "${{ secrets.AAP_HOST }}/api/v2/projects/${{ secrets.AAP_PROJECT_ID }}/" \
+            STATUS=$(curl -sk \
+              "${API}/projects/${{ secrets.AAP_PROJECT_ID }}/" \
               -H "Authorization: Bearer ${{ secrets.AAP_TOKEN }}" | \
               python3 -c "import sys,json; print(json.load(sys.stdin).get('status','unknown'))")
             echo "  Attempt $i: project status = $STATUS"
@@ -65,8 +69,10 @@ jobs:
 
       - name: Launch AAP workflow template
         run: |
-          LAUNCH_RESULT=$(curl -s -w "\n%{http_code}" -X POST \
-            "${{ secrets.AAP_HOST }}/api/v2/workflow_job_templates/${{ secrets.AAP_WORKFLOW_ID }}/launch/" \
+          API="${{ secrets.AAP_HOST }}/api/controller/v2"
+
+          LAUNCH_RESULT=$(curl -sk -w "\n%{http_code}" -X POST \
+            "${API}/workflow_job_templates/${{ secrets.AAP_WORKFLOW_ID }}/launch/" \
             -H "Authorization: Bearer ${{ secrets.AAP_TOKEN }}" \
             -H "Content-Type: application/json")
           HTTP_CODE=$(echo "$LAUNCH_RESULT" | tail -1)
