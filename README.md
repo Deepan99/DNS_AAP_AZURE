@@ -42,6 +42,26 @@ temporarily from the imported Galaxy role. The AAP playbooks use only
 5. Link those templates in an AAP workflow; add a production approval after
    successful pre-checks.
 
+## CI → AAP auto-sync and launch
+
+The GitHub Actions workflow (`.github/workflows/ansible-lint.yml`) automatically
+syncs the AAP project and launches the workflow template after lint passes on
+a push to `main`.
+
+### Required GitHub Secrets
+
+Configure these in **Settings → Secrets and variables → Actions** on the repository:
+
+| Secret | Description | Example |
+| --- | --- | --- |
+| `AAP_HOST` | AAP/AWX base URL (no trailing slash) | `https://aap.example.com` |
+| `AAP_TOKEN` | AAP personal access token or OAuth2 token | `ey...` |
+| `AAP_PROJECT_ID` | Numeric ID of the AAP Git project | `12` |
+| `AAP_WORKFLOW_ID` | Numeric ID of the AAP workflow job template | `8` |
+
+> **Tip:** Find the IDs from the AAP UI URL — e.g. `/#/projects/12/details`
+> gives you `AAP_PROJECT_ID=12`.
+
 ## Security
 
 - Never commit SSH keys, Azure credentials, vault passwords, or plaintext secrets.

@@ -26,3 +26,56 @@ jobs:
         run: ANSIBLE_COLLECTIONS_PATH="$RUNNER_TEMP/ansible_collections" ansible-lint playbooks roles
       - name: Lint YAML
         run: yamllint .
+
+  trigger-aap:
+    name: Sync AAP project and launch workflow
+    needs: lint
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Sync AAP project
+        run: |
+          # Trigger project sync and wait for completion
+          SYNC_RESULT=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            "${{ secrets.AAP_HOST }}/api/v2/projects/${{ secrets.AAP_PROJECT_ID }}/update/" \
+            -H "Authorization: Bearer ${{ secrets.AAP_TOKEN }}" \
+            -H "Content-Type: application/json")
+          echo "Project sync triggered: HTTP $SYNC_RESULT"
+          if [ "$SYNC_RESULT" -lt 200 ] || [ "$SYNC_RESULT" -ge 300 ]; then
+            echo "::error::Failed to sync AAP project (HTTP $SYNC_RESULT)"
+            exit 1
+          fi
+          # Wait for the project sync to finish
+          echo "Waiting for project sync to complete..."
+          for i in $(seq 1 30); do
+            sleep 10
+            STATUS=$(curl -s \
+              "${{ secrets.AAP_HOST }}/api/v2/projects/${{ secrets.AAP_PROJECT_ID }}/" \
+              -H "Authorization: Bearer ${{ secrets.AAP_TOKEN }}" | \
+              python3 -c "import sys,json; print(json.load(sys.stdin).get('status','unknown'))")
+            echo "  Attempt $i: project status = $STATUS"
+            if [ "$STATUS" = "successful" ]; then
+              echo "Project sync completed successfully."
+              break
+            elif [ "$STATUS" = "failed" ] || [ "$STATUS" = "error" ] || [ "$STATUS" = "canceled" ]; then
+              echo "::error::Project sync failed with status: $STATUS"
+              exit 1
+            fi
+          done
+
+      - name: Launch AAP workflow template
+        run: |
+          LAUNCH_RESULT=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ secrets.AAP_HOST }}/api/v2/workflow_job_templates/${{ secrets.AAP_WORKFLOW_ID }}/launch/" \
+            -H "Authorization: Bearer ${{ secrets.AAP_TOKEN }}" \
+            -H "Content-Type: application/json")
+          HTTP_CODE=$(echo "$LAUNCH_RESULT" | tail -1)
+          BODY=$(echo "$LAUNCH_RESULT" | head -n -1)
+          echo "Workflow launch: HTTP $HTTP_CODE"
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "::error::Failed to launch AAP workflow (HTTP $HTTP_CODE)"
+            echo "$BODY"
+            exit 1
+          fi
+          WORKFLOW_URL=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('url',''))")
+          echo "✅ AAP workflow launched: ${{ secrets.AAP_HOST }}/#$WORKFLOW_URL"
