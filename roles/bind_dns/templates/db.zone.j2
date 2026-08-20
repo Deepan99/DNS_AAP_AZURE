@@ -1,0 +1,11 @@
+$TTL 300
+@ IN SOA dns-01.{{ bind_dns_zone }}. hostmaster.{{ bind_dns_zone }}. (
+  {{ bind_dns_zone_serial }} ; serial
+  3600 ; refresh
+  600 ; retry
+  1209600 ; expire
+  300 ; negative cache TTL
+)
+@ IN NS dns-01.{{ bind_dns_zone }}.
+{% for record in bind_dns_records %}{{ record.name }} IN A {{ record.ip }}
+{% endfor %}
