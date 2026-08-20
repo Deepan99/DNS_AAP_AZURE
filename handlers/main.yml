@@ -1,7 +1,21 @@
 ---
+# ==============================================================================
+# Enterprise Handlers for ISC BIND DNS
+# ==============================================================================
+
+- name: check bind configuration
+  command: named-checkconf /etc/bind/named.conf
+  changed_when: false
+  listen: "reload bind"
 
 - name: reload bind
   service:
     name: "{{ bind_service }}"
     state: reloaded
+  become: yes
+
+- name: restart bind
+  service:
+    name: "{{ bind_service }}"
+    state: restarted
   become: yes
