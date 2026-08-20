@@ -12,8 +12,6 @@ permissions:
 jobs:
   lint:
     runs-on: ubuntu-24.04
-    env:
-      ANSIBLE_COLLECTIONS_PATH: ${{ runner.temp }}/ansible_collections
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -24,6 +22,6 @@ jobs:
       - name: Install collections
         run: ansible-galaxy collection install -r collections/requirements.yml -p "$RUNNER_TEMP"
       - name: Lint playbooks and roles
-        run: ansible-lint playbooks roles
+        run: ANSIBLE_COLLECTIONS_PATH="$RUNNER_TEMP/ansible_collections" ansible-lint playbooks roles
       - name: Lint YAML
         run: yamllint .
