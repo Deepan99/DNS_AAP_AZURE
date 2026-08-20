@@ -1,20 +1,38 @@
 ---
-# Define your Private DNS Zone and the records for your 3 VMs
-bind_zones:
-  - name: "azure.local"  # Change this if you want a different domain name
-    primaries:
-      - "10.0.0.4"  # REPLACE with the private IP of your bastion-host
-    name_servers:
-      - "bastion-host.azure.local."
+# ==============================================================================
+# Enterprise BIND DNS Configuration for Azure Hub-and-Spoke
+# Path: group_vars/all.yml
+# ==============================================================================
+
+# 1. Listening Interfaces & Security ACLs
+bind_listen_ipv4:
+  - "127.0.0.1"
+  - "10.0.0.4"              # Bastion Host Private IP
+
+bind_allow_query:
+  - "localhost"
+  - "10.0.0.0/16"           # Hub VNet Subnet
+  - "10.1.0.0/16"           # Spoke VNet Subnet
+
+# 2. Upstream Recursive Forwarders (Azure Recursive DNS + Fallback)
+bind_forwarders:
+  - "168.63.129.16"         # Azure Internal Recursive Resolver
+  - "8.8.8.8"               # Google Public DNS Fallback
+
+bind_recursion: true
+
+# 3. Private Authoritative Zones & Host Records
+bind_zone_domains:
+  - name: "internal"
+    type: "master"
+    networks:
+      - "10.0"
+      - "10.1"
+    hostmaster_email: "sre.deepan99@gmail.com"
     hosts:
-      # Master DNS Server
-      - name: "bastion-host"
-        ip: "10.0.0.4"   # REPLACE with private IP of bastion-host
-      
-      # Client 1
-      - name: "awx-target-1"
-        ip: "10.0.0.5"   # REPLACE with private IP of awx-target-1
-      
-      # Client 2
-      - name: "awx-target-2"
-        ip: "10.0.0.6"   # REPLACE with private IP of awx-target-2
+      - name: "bastion"
+        ip: "10.0.0.4"
+      - name: "awx1"
+        ip: "10.1.1.5"
+      - name: "awx2"
+        ip: "10.1.1.4"
