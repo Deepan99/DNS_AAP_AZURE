@@ -17,6 +17,9 @@
         option: "{{ item.option }}"
         value: "{{ item.value }}"
         no_extra_spaces: yes
+        owner: root
+        group: root
+        mode: '0644'
       loop:
         - { option: "DNS", value: "{{ dns_client_nameservers | join(' ') }}" }
         - { option: "Domains", value: "{{ dns_client_search_domains | join(' ') }}" }
