@@ -1,0 +1,5 @@
+zone "{{ bind_dns_zone }}" {
+    type primary;
+    file "{{ bind_dns_zone_dir }}/db.{{ bind_dns_zone }}";
+    allow-transfer { none; };
+};

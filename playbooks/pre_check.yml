@@ -4,36 +4,33 @@
 # AAP / AWX Workflow Step 1
 # ==============================================================================
 
-- name: Pre-Check - Audit Bastion Gateway & Target Connectivity
-  hosts: bastion, tag_Role_bastion, rg_hub_eastus
-  become: yes
+- name: Pre-check DNS server prerequisites
+  hosts: dns_servers
+  become: true
+  gather_facts: true
   tasks:
-    - name: Pre-Check 1 - Verify Kernel IP Forwarding on Bastion
-      command: cat /proc/sys/net/ipv4/ip_forward
-      register: pre_ip_forward
-      changed_when: false
+    - name: Confirm supported operating system
+      ansible.builtin.assert:
+        that: ansible_facts.os_family == 'Debian'
+        fail_msg: This initial bind_dns role supports Ubuntu/Debian only.
 
-    - name: Pre-Check 2 - Verify Port 53 Availability on Bastion
-      command: ss -tulpn
+    - name: Confirm configured DNS listener is present on the host
+      ansible.builtin.assert:
+        that: bind_dns_listen_addresses | select('in', ansible_all_ipv4_addresses) | list | length > 0
+        fail_msg: The configured bind_dns_listen_addresses value does not belong to this host.
+
+    - name: Inspect existing DNS listeners
+      ansible.builtin.command: ss -lntup
       register: pre_port_53
       changed_when: false
 
-    - name: Display Pre-Check Status
-      debug:
-        msg:
-          - "IP Forwarding Enabled: {{ pre_ip_forward.stdout }}"
-          - "Port 53 Active Listeners: {{ pre_port_53.stdout_lines | select('search', ':53') | list }}"
-
-- name: Pre-Check - Spoke Workload Network Audit
-  hosts: spoke_nodes, tag_Tier_web, rg_spoke_eastus
-  become: yes
+- name: Pre-check DNS client prerequisites
+  hosts: dns_clients
+  become: true
+  gather_facts: false
   tasks:
-    - name: Pre-Check 3 - Check Current DNS Resolver on Spoke Node
-      command: systemd-resolve --status || resolvectl status
+    - name: Inspect current resolver state
+      ansible.builtin.command: resolvectl status
       register: pre_spoke_dns
       changed_when: false
       failed_when: false
-
-    - name: Display Current Spoke Resolver Status
-      debug:
-        msg: "Current Resolver Configuration: {{ pre_spoke_dns.stdout_lines[:10] }}"

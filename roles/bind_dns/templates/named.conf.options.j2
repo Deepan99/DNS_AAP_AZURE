@@ -1,0 +1,10 @@
+options {
+    directory "/var/cache/bind";
+    recursion yes;
+    allow-query { {% for network in bind_dns_allowed_networks %}{{ network }}; {% endfor %} };
+    listen-on { {% for address in bind_dns_listen_addresses %}{{ address }}; {% endfor %} };
+    listen-on-v6 { none; };
+    forward only;
+    forwarders { {% for forwarder in bind_dns_forwarders %}{{ forwarder }}; {% endfor %} };
+    dnssec-validation auto;
+};

@@ -1,0 +1,53 @@
+---
+- name: Assert supported operating system
+  ansible.builtin.assert:
+    that: ansible_facts.os_family == 'Debian'
+    fail_msg: The bind_dns role currently supports Ubuntu/Debian only.
+
+- name: Set platform-specific BIND variables
+  ansible.builtin.set_fact:
+    bind_dns_package_name: bind9
+    bind_dns_service_name: bind9
+    bind_dns_config_dir: /etc/bind
+    bind_dns_zone_dir: /var/cache/bind
+
+- name: Install BIND
+  ansible.builtin.package:
+    name: "{{ bind_dns_package_name }}"
+    state: present
+
+- name: Configure BIND options
+  ansible.builtin.template:
+    src: named.conf.options.j2
+    dest: "{{ bind_dns_config_dir }}/named.conf.options"
+    owner: root
+    group: root
+    mode: '0644'
+    validate: named-checkconf %s
+  notify: Reload bind
+
+- name: Configure local zones
+  ansible.builtin.template:
+    src: named.conf.local.j2
+    dest: "{{ bind_dns_config_dir }}/named.conf.local"
+    owner: root
+    group: root
+    mode: '0644'
+    validate: named-checkconf %s
+  notify: Reload bind
+
+- name: Deploy authoritative zone file
+  ansible.builtin.template:
+    src: db.zone.j2
+    dest: "{{ bind_dns_zone_dir }}/db.{{ bind_dns_zone }}"
+    owner: root
+    group: root
+    mode: '0644'
+    validate: "named-checkzone {{ bind_dns_zone }} %s"
+  notify: Reload bind
+
+- name: Enable and start BIND
+  ansible.builtin.service:
+    name: "{{ bind_dns_service_name }}"
+    state: started
+    enabled: true
