@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   role_name: bind
-  namespace: Deepan99
+  namespace: deepan99
   author: DDeepan kumar
   description: >
     Sets up ISC BIND as a central authoritative and caching DNS server
