@@ -3,8 +3,8 @@
 # authentication; no cloud credentials are stored in Git.
 plugin: azure.azcollection.azure_rm
 include_vm_resource_groups:
-  - rg-hub-connectivity-eastus
-  - rg-spoke-app1-eastus
+  - rg-hub-eastus
+  - rg-spoke-eastus
 
 auth_source: auto
 
