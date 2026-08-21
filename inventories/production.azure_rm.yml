@@ -13,8 +13,6 @@ groups:
   dns_clients: "tags.Role | default('') == 'dns_client'"
 
 keyed_groups:
-  - key: tags.Role
-    prefix: role
   - key: resource_group
     prefix: rg
 
