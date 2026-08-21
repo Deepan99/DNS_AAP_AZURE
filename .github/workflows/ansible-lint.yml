@@ -33,31 +33,75 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-24.04
     steps:
-      - name: Launch AAP workflow template
+      - name: Discover AAP API and launch workflow
         run: |
-          # AAP auto-syncs the project on launch (Update Revision on Launch)
-          # Try gateway API first (AAP 2.5+), fall back to legacy API
-          for API_PATH in "api/controller/v2" "api/v2"; do
-            URL="${{ secrets.AAP_HOST }}/${API_PATH}/workflow_job_templates/${{ secrets.AAP_WORKFLOW_ID }}/launch/"
-            echo "Trying: ${URL}"
-            LAUNCH_RESULT=$(curl -sk -w "\n%{http_code}" -X POST \
-              "${URL}" \
-              -H "Authorization: Bearer ${{ secrets.AAP_TOKEN }}" \
-              -H "Content-Type: application/json")
-            HTTP_CODE=$(echo "$LAUNCH_RESULT" | tail -1)
-            BODY=$(echo "$LAUNCH_RESULT" | head -n -1)
-            echo "Response: HTTP $HTTP_CODE"
-            if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-              echo "✅ AAP workflow launched successfully!"
-              echo "$BODY" | python3 -c "
+          HOST="${{ secrets.AAP_HOST }}"
+          TOKEN="${{ secrets.AAP_TOKEN }}"
+          WF_ID="${{ secrets.AAP_WORKFLOW_ID }}"
+
+          # Remove trailing slash from HOST if present
+          HOST="${HOST%/}"
+
+          echo "=== Step 1: Discover API root ==="
+          for API_ROOT in "${HOST}/api/controller/v2" "${HOST}/api/v2" "${HOST}/api"; do
+            echo "Checking: ${API_ROOT}/"
+            HTTP=$(curl -sk -o /dev/null -w "%{http_code}" "${API_ROOT}/" \
+              -H "Authorization: Bearer ${TOKEN}")
+            echo "  -> HTTP $HTTP"
+            if [ "$HTTP" -ge 200 ] && [ "$HTTP" -lt 400 ]; then
+              echo "  ✅ API root found!"
+              FOUND_API="${API_ROOT}"
+              break
+            fi
+          done
+
+          if [ -z "$FOUND_API" ]; then
+            echo ""
+            echo "=== Trying 'Token' auth instead of 'Bearer' ==="
+            for API_ROOT in "${HOST}/api/controller/v2" "${HOST}/api/v2" "${HOST}/api"; do
+              echo "Checking: ${API_ROOT}/"
+              HTTP=$(curl -sk -o /dev/null -w "%{http_code}" "${API_ROOT}/" \
+                -H "Authorization: Token ${TOKEN}")
+              echo "  -> HTTP $HTTP"
+              if [ "$HTTP" -ge 200 ] && [ "$HTTP" -lt 400 ]; then
+                echo "  ✅ API root found with Token auth!"
+                FOUND_API="${API_ROOT}"
+                AUTH_HEADER="Token"
+                break
+              fi
+            done
+          fi
+
+          AUTH_HEADER="${AUTH_HEADER:-Bearer}"
+
+          if [ -z "$FOUND_API" ]; then
+            echo ""
+            echo "::error::Could not discover AAP API. Dumping root page for debug..."
+            curl -sk "${HOST}/api/" | head -50
+            exit 1
+          fi
+
+          echo ""
+          echo "=== Step 2: Launch workflow template ==="
+          URL="${FOUND_API}/workflow_job_templates/${WF_ID}/launch/"
+          echo "POST ${URL}"
+          RESULT=$(curl -sk -w "\n%{http_code}" -X POST "${URL}" \
+            -H "Authorization: ${AUTH_HEADER} ${TOKEN}" \
+            -H "Content-Type: application/json")
+          HTTP_CODE=$(echo "$RESULT" | tail -1)
+          BODY=$(echo "$RESULT" | head -n -1)
+          echo "Response: HTTP $HTTP_CODE"
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ AAP workflow launched successfully!"
+            echo "$BODY" | python3 -c "
           import sys, json
           data = json.load(sys.stdin)
           print(f'  Job ID: {data.get(\"id\", \"N/A\")}')
-          print(f'  URL: {data.get(\"url\", \"N/A\")}')
           " || true
-              exit 0
-            fi
-          done
-          echo "::error::Failed to launch AAP workflow on all API paths"
-          echo "$BODY"
+            exit 0
+          fi
+
+          echo "::error::Failed to launch workflow (HTTP $HTTP_CODE)"
+          echo "$BODY" | head -20
           exit 1
