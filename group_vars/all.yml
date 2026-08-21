@@ -2,7 +2,8 @@
 ---
 # Non-secret production configuration. Secrets belong in an AAP credential or
 # in an Ansible-Vault encrypted file, never in this file.
-bind_dns_zone: corp.example.com
+# Azure cloud internal domain configuration
+bind_dns_zone: azure.internal
 bind_dns_zone_serial: "2026082101"
 bind_dns_listen_addresses:
   - 127.0.0.1
@@ -12,16 +13,18 @@ bind_dns_allowed_networks:
   - 10.0.0.0/16
   - 10.1.0.0/16
 bind_dns_forwarders:
-  - 168.63.129.16
+  - 168.63.129.16  # Azure recursive DNS resolver (correct for Azure cloud)
 bind_dns_records:
   - name: dns-01
     ip: 10.0.0.4
-  - name: app-01
-    ip: 10.1.1.4
-  - name: app-02
+  - name: awx-target-1
     ip: 10.1.1.5
+  - name: awx-target-2
+    ip: 10.1.1.4
+  - name: bastion-host
+    ip: 10.0.0.4
 
 dns_client_nameservers:
   - 10.0.0.4
 dns_client_search_domains:
-  - corp.example.com
+  - azure.internal

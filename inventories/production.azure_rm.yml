@@ -18,6 +18,11 @@ keyed_groups:
   - key: resource_group
     prefix: rg
 
-# Map IP Address for SSH
+# SSH via public IP when available, otherwise fall back to private IP.
+# The bastion/dns-server has a public IP; spoke clients do not.
 hostvar_expressions:
-  ansible_host: private_ip_address
+  ansible_host: public_ip_address | default(private_ip_address, true)
+
+# Spoke VMs (no public IP) connect through the bastion as a jump host.
+# Set the bastion's public IP as the SSH proxy in AAP job template
+# extra_vars or in group_vars for dns_clients.

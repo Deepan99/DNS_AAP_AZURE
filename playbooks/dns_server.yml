@@ -9,5 +9,9 @@
   hosts: dns_servers
   become: true
   gather_facts: true
+  pre_tasks:
+    - name: Set dynamic DNS zone serial based on current date
+      ansible.builtin.set_fact:
+        bind_dns_zone_serial: "{{ ansible_date_time.year }}{{ ansible_date_time.month }}{{ ansible_date_time.day }}01"
   roles:
     - role: bind_dns

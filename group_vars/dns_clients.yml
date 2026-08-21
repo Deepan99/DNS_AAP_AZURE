@@ -1,0 +1,15 @@
+---
+# Spoke VMs have no public IP. Route SSH through the bastion (dns_server)
+# which has a public IP. AAP uses this as a ProxyJump host.
+# Using dynamic inventory to get bastion public IP
+# SSH Security: Balanced industrial practice configuration
+# StrictHostKeyChecking=accept-new for dynamic environments
+# Additional timeout and keepalive parameters for reliability
+ansible_ssh_common_args: >-
+  -o StrictHostKeyChecking=accept-new
+  -o UserKnownHostsFile={{ lookup('env', 'ANSIBLE_SSH_KNOWN_HOSTS') | default('~/.ssh/known_hosts') }}
+  -o PubkeyAcceptedKeyTypes=+ssh-rsa
+  -o ProxyJump=azureuser@{{ hostvars[groups['dns_servers'][0]].ansible_host }}
+  -o ConnectTimeout=30
+  -o ServerAliveInterval=60
+  -o ServerAliveCountMax=3
